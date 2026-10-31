@@ -143,7 +143,7 @@ def run_gpf_update():
                     "asset_name": name, # 🟢 แก้ไขจุดที่ 2: บังคับอัปเดต asset_name ให้เป็นชื่อที่ถูกต้อง (ไม่เป็น undefined)
                     "prev_nav": round(float(prev_nav), 4) if prev_nav else round(latest_nav, 4),
                     "current_nav": round(latest_nav, 4),
-                    "value": round(units * latest_nav, 4),
+                    "current_value": round(units * latest_nav, 4),
                     "nav_date": today_date_str,
                     "updated_at": now_thai_iso,
                 }
