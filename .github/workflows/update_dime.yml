@@ -15,5 +15,5 @@ jobs:
         with:
           python-version: '3.11'
       - run: |
-          pip install requests pandas supabase yfinance
+          pip install supabase yfinance
           python fetch_dime_nav.py
