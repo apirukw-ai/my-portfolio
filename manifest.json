@@ -1,0 +1,15 @@
+{
+  "short_name": "Portfolio",
+  "name": "Investment Portfolio Dashboard",
+  "icons": [
+    {
+      "src": "icon-192.jpg",
+      "type": "image/jpeg",
+      "sizes": "192x192"
+    }
+  ],
+  "start_url": "/my-portfolio/",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "display": "standalone"
+}
