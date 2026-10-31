@@ -119,29 +119,34 @@ def run_gpf_update():
             item.get("asset_name", "").strip() if item.get("asset_name") else ""
         )
         
-        # 🟢 แก้ไขจุดที่ 1: ถ้า name เป็น "undefined" หรือค่าว่าง ให้ดึง code มาใช้แทน
         if not name or name.lower() == "undefined":
             name = code
 
         units = float(item.get("units") or 0)
-        old_nav_date = item.get("nav_date")
         old_current_nav = item.get("current_nav")
+        old_prev_nav = item.get("prev_nav")
 
-        # ดึง NAV โดยค้นหาจาก code หรือ name
+        # ดึง NAV ล่าสุดจากเว็บ
         latest_nav = gpf_nav_data.get(code) or gpf_nav_data.get(name)
 
         if latest_nav and latest_nav > 0:
             updated_item = item.copy()
 
-            # 🟢 หากวันที่เปลี่ยนเป็นวันใหม่ ให้สลับ current_nav เก่า ไปไว้ที่ prev_nav
-            prev_nav = item.get("prev_nav")
-            if old_nav_date and old_nav_date != today_date_str and old_current_nav:
-                prev_nav = old_current_nav
+            # 🟢 Logic ป้องกัน prev_nav ซ้ำกับ current_nav
+            # 1. ราคาเปลี่ยนจริง -> เอา current_nav เดิมย้ายไปเป็น prev_nav
+            if old_current_nav and float(old_current_nav) != float(latest_nav):
+                prev_nav = float(old_current_nav)
+            # 2. ราคาเท่าเดิม (รันซ้ำวันเดิม/วันหยุด) -> ใช้ prev_nav เดิมใน DB ต่อไป
+            elif old_prev_nav:
+                prev_nav = float(old_prev_nav)
+            # 3. ข้อมูลใหม่เพิ่งสร้าง -> ใช้ latest_nav เป็นค่าเริ่มต้น
+            else:
+                prev_nav = float(latest_nav)
 
             updated_item.update(
                 {
-                    "asset_name": name, # 🟢 แก้ไขจุดที่ 2: บังคับอัปเดต asset_name ให้เป็นชื่อที่ถูกต้อง (ไม่เป็น undefined)
-                    "prev_nav": round(float(prev_nav), 4) if prev_nav else round(latest_nav, 4),
+                    "asset_name": name,
+                    "prev_nav": round(float(prev_nav), 4),
                     "current_nav": round(latest_nav, 4),
                     "current_value": round(units * latest_nav, 4),
                     "nav_date": today_date_str,
