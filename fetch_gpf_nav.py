@@ -98,7 +98,7 @@ def run_gpf_update():
 
     try:
         db_res = (
-            supabase.table("portfolio_plans")
+            supabase.table("user_portfolios")
             .select("*")
             .ilike("app_source", "GPF")
             .execute()
@@ -155,7 +155,7 @@ def run_gpf_update():
 
     if batch_payload:
         try:
-            supabase.table("portfolio_plans").upsert(batch_payload).execute()
+            supabase.table("user_portfolios").upsert(batch_payload).execute()
             print(
                 f"💾 อัปเดต Supabase แบบ Batch สำเร็จทั้งหมด {len(batch_payload)} รายการ"
             )
