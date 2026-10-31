@@ -15,5 +15,5 @@ jobs:
         with:
           python-version: '3.11'
       - run: |
-          pip install requests pandas supabase pythainav tenacity beautifulsoup4 yfinance
+          pip install requests beautifulsoup4 supabase
           python fetch_scb_nav.py
