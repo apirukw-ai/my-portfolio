@@ -77,6 +77,17 @@ def fetch_scb_nav():
             "https://www.scbam.com/funddata/funddataws.json"
         ) as response:
             data = json.load(response)
+            for item in data:
+                code = item.get("FundCode", "")
+
+                if "SCBWORLD" in code:
+                    print(item)
+
+                if "SCBNDQ" in code:
+                    print(item)
+
+                if "SCBAXJ" in code:
+                    print(item)
 
         print("TYPE:", type(data))
         print("COUNT:", len(data))
