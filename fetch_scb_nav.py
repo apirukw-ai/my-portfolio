@@ -42,6 +42,12 @@ def fetch_scb_nav():
             context = browser.new_context(viewport={'width': 1280, 'height': 800})
             page = context.new_page()
 
+            def log_response(r):
+                if "api" in r.url.lower() or "json" in r.url.lower():
+                    print("API:", r.url)
+
+            page.on("response", log_response)
+
             try:
                 page.goto(url, wait_until="domcontentloaded", timeout=60000)
                 page.wait_for_timeout(3000)
