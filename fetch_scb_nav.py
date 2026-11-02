@@ -18,7 +18,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==========================================
-# 2. จับคู่ asset_name -> คำค้นหาสัญลักษณ์กองทุน
+# 2. จับคู่ asset_name -> รายชื่อสัญลักษณ์ค้นหา
 # ==========================================
 FUND_MAP = {
     'SCBAXJ(E)':    ['SCBAXJ(E)', 'SCBAXJ-E', 'SCBAXJ'],
@@ -37,24 +37,37 @@ def fetch_scb_nav():
 
     try:
         with sync_playwright() as p:
+            # ปรับ Viewport ให้เหมือนหน้าจอ Desktop จริง
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            context = browser.new_context(viewport={'width': 1280, 'height': 800})
+            page = context.new_page()
+
             try:
-                page.goto(url, wait_until="networkidle", timeout=60000)
-                
-                # รอให้ Element ของกองทุนแสดงผลบนหน้าเว็บ
-                page.wait_for_timeout(5000)
+                page.goto(url, wait_until="domcontentloaded", timeout=60000)
+                page.wait_for_timeout(3000)
+
+                # 1. ลองกดปิด คุกกี้/Popup (ถ้ามี)
+                try:
+                    page.click("button:has-text('ยอมรับ')", timeout=2000)
+                except Exception:
+                    pass
+
+                # 2. จำลองการ Scroll หน้าจอลงด้านล่าง เพื่อกระตุ้น Lazy Load ข้อมูลกองทุน
+                for _ in range(3):
+                    page.mouse.wheel(0, 1000)
+                    page.wait_for_timeout(1000)
+
                 html_content = page.content()
             finally:
                 browser.close()
 
         soup = BeautifulSoup(html_content, 'html.parser')
-        
-        # ค้นหาข้อความการ์ด หรือองค์ประกอบในหน้าเว็บ
-        text_blocks = soup.find_all(['div', 'tr', 'li', 'article'])
-        
-        for block in text_blocks:
-            raw_text = block.get_text()
+
+        # ค้นหาทุก Element ที่มีข้อความ
+        all_elements = soup.find_all(['tr', 'div', 'li', 'article', 'section'])
+
+        for elem in all_elements:
+            raw_text = elem.get_text(separator=" ")
             clean_text = re.sub(r'[\s\-]+', '', raw_text).upper()
 
             for asset_name, aliases in FUND_MAP.items():
@@ -63,15 +76,17 @@ def fetch_scb_nav():
 
                 for alias in aliases:
                     clean_alias = re.sub(r'[\s\-]+', '', alias).upper()
+
+                    # ถ้าพบสัญลักษณ์กองทุนใน Block นี้
                     if clean_alias in clean_text:
-                        # ดึงตัวเลขทศนิยม 4 ตำแหน่งที่อยู่ตามหลังคำว่า NAV หรือในข้อความ
-                        matches = re.findall(r'\d[\d\,]*\.\d{4}', raw_text)
+                        # ดึงทศนิยม 4 ตำแหน่ง (รูปแบบ NAV กองทุน)
+                        matches = re.findall(r'\b\d{1,3}(?:,\d{3})*\.\d{4}\b', raw_text)
                         if matches:
                             try:
                                 nav_val = float(matches[0].replace(',', ''))
                                 if 1.0 <= nav_val <= 1000.0:
                                     nav_results[asset_name] = nav_val
-                                    print(f"✅ เจอ {asset_name} -> NAV: {nav_val}")
+                                    print(f"✅ เจอ {asset_name} (ผ่านคำค้น '{alias}') -> NAV: {nav_val}")
                                     break
                             except ValueError:
                                 continue
@@ -102,7 +117,7 @@ def update_supabase_batch(nav_data):
     for item in scb_items:
         asset_name = item.get("asset_name", "").strip()
         asset_code = item.get("asset_code", "").strip()
-        
+
         nav_val = nav_data.get(asset_name) or nav_data.get(asset_code)
 
         if nav_val:
@@ -110,14 +125,13 @@ def update_supabase_batch(nav_data):
             old_current_nav = item.get("current_nav")
             old_prev_nav = item.get("prev_nav")
 
-            # Logic ป้องกัน prev_nav ซ้ำกับ current_nav
             if old_current_nav and float(old_current_nav) != float(nav_val):
                 prev_nav = float(old_current_nav)
             elif old_prev_nav:
                 prev_nav = float(old_prev_nav)
             else:
                 prev_nav = float(nav_val)
-            
+
             updated_item = item.copy()
             updated_item.update({
                 "prev_nav": round(prev_nav, 4),
@@ -138,7 +152,7 @@ def update_supabase_batch(nav_data):
         print("⚠️ ไม่พบข้อมูล asset_name / asset_code ใน Supabase ที่จับคู่ตรงกัน")
 
 if __name__ == "__main__":
-    print("🚀 เริ่มต้นกระบวนการ Auto Update NAV (SCB via Playwright)...")
+    print("🚀 เริ่มต้นกระบวนการ Auto Update NAV (SCB via Playwright + Scroll)...")
     nav_data = fetch_scb_nav()
     print("-" * 40)
     print(f"📊 สรุปข้อมูลที่ดึงได้ ({len(nav_data)}/{len(FUND_MAP)} กองทุน): {nav_data}")
