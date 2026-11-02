@@ -58,6 +58,11 @@ def fetch_scb_nav():
                     page.wait_for_timeout(1000)
 
                 html_content = page.content()
+
+                print("HTML Length:", len(html_content))
+                print("SCBWORLD", "SCBWORLD" in html_content)
+                print("SCBNDQ", "SCBNDQ" in html_content)
+                print("SCBAXJ", "SCBAXJ" in html_content)
             finally:
                 browser.close()
 
