@@ -70,15 +70,17 @@ def fetch_scb_nav():
                 browser.close()
 
         # ===== DEBUG JSON =====
-        import requests
+        import urllib.request
+        import json
 
-        r = requests.get(
-            "https://www.scbam.com/funddata/funddataws.json",
-            timeout=30
-        )
+        with urllib.request.urlopen(
+            "https://www.scbam.com/funddata/funddataws.json"
+        ) as response:
+            data = json.load(response)
 
-        print("STATUS:", r.status_code)
-        print(r.text[:2000])      
+        print("TYPE:", type(data))
+        print("COUNT:", len(data))
+        print("FIRST:", data[0])      
         
         soup = BeautifulSoup(html_content, 'html.parser')
 
