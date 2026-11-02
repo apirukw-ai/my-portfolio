@@ -1,8 +1,7 @@
 import os
-import re
+import json
+import urllib.request
 from datetime import datetime, timedelta, timezone
-from playwright.sync_api import sync_playwright
-from bs4 import BeautifulSoup
 from supabase import create_client, Client
 
 # ==========================================
@@ -30,46 +29,11 @@ FUND_MAP = {
 }
 
 def fetch_scb_nav():
-    url = "https://www.scbam.com/funds"
     nav_results = {}
 
-    print(f"📡 กำลังเปิด Headless Browser เพื่อดึงข้อมูลจาก SCBAM: {url}")
+    print("📡 กำลังดึงข้อมูล NAV จาก funddataws.json")
 
     try:
-        with sync_playwright() as p:
-            # ปรับ Viewport ให้เหมือนหน้าจอ Desktop จริง
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(viewport={'width': 1280, 'height': 800})
-            page = context.new_page()
-
-            def log_response(r):
-                if "api" in r.url.lower() or "json" in r.url.lower():
-                    print("API:", r.url)
-
-            page.on("response", log_response)
-
-            try:
-                page.goto(url, wait_until="domcontentloaded", timeout=60000)
-                page.wait_for_timeout(3000)
-
-                # 1. ลองกดปิด คุกกี้/Popup (ถ้ามี)
-                try:
-                    page.click("button:has-text('ยอมรับ')", timeout=2000)
-                except Exception:
-                    pass
-
-                # 2. จำลองการ Scroll หน้าจอลงด้านล่าง เพื่อกระตุ้น Lazy Load ข้อมูลกองทุน
-                for _ in range(3):
-                    page.mouse.wheel(0, 1000)
-                    page.wait_for_timeout(1000)
-
-                html_content = page.content()
-
-                print(html_content[:3000])
-            finally:
-                browser.close()
-
-        # ===== DEBUG JSON =====
         import urllib.request
         import json
 
@@ -77,57 +41,27 @@ def fetch_scb_nav():
             "https://www.scbam.com/funddata/funddataws.json"
         ) as response:
             data = json.load(response)
-            for item in data:
-                code = item.get("FundCode", "")
 
-                if "SCBWORLD" in code:
-                    print(item)
+        for item in data:
+            fund_code = item.get("FundCode", "").upper()
+            nav = item.get("LatestNAVPerUnit")
 
-                if "SCBNDQ" in code:
-                    print(item)
-
-                if "SCBAXJ" in code:
-                    print(item)
-
-        print("TYPE:", type(data))
-        print("COUNT:", len(data))
-        print("FIRST:", data[0])      
-        
-        soup = BeautifulSoup(html_content, 'html.parser')
-
-        # ค้นหาทุก Element ที่มีข้อความ
-        all_elements = soup.find_all(['tr', 'div', 'li', 'article', 'section'])
-
-        for elem in all_elements:
-            raw_text = elem.get_text(separator=" ")
-            clean_text = re.sub(r'[\s\-]+', '', raw_text).upper()
+            if nav is None:
+                continue
 
             for asset_name, aliases in FUND_MAP.items():
-                if asset_name in nav_results:
-                    continue
+                aliases_upper = [a.upper() for a in aliases]
 
-                for alias in aliases:
-                    clean_alias = re.sub(r'[\s\-]+', '', alias).upper()
-
-                    # ถ้าพบสัญลักษณ์กองทุนใน Block นี้
-                    if clean_alias in clean_text:
-                        # ดึงทศนิยม 4 ตำแหน่ง (รูปแบบ NAV กองทุน)
-                        matches = re.findall(r'\b\d{1,3}(?:,\d{3})*\.\d{4}\b', raw_text)
-                        if matches:
-                            try:
-                                nav_val = float(matches[0].replace(',', ''))
-                                if 1.0 <= nav_val <= 1000.0:
-                                    nav_results[asset_name] = nav_val
-                                    print(f"✅ เจอ {asset_name} (ผ่านคำค้น '{alias}') -> NAV: {nav_val}")
-                                    break
-                            except ValueError:
-                                continue
+                if fund_code in aliases_upper:
+                    nav_results[asset_name] = float(nav)
+                    print(f"✅ {asset_name} -> NAV {nav}")
+                    break
 
         return nav_results
 
     except Exception as e:
         print(f"❌ เกิดข้อผิดพลาดขณะดึง NAV: {e}")
-        return nav_results
+        return {}
 
 def update_supabase_batch(nav_data):
     if not nav_data:
