@@ -15,5 +15,6 @@ jobs:
         with:
           python-version: '3.11'
       - run: |
-          pip install requests beautifulsoup4 supabase
+          pip install supabase playwright beautifulsoup4
+          playwright install --with-deps chromium
           python fetch_scb_nav.py
