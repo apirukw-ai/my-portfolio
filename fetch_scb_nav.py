@@ -20,12 +20,12 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 # 2. จับคู่ asset_name -> รายชื่อสัญลักษณ์ค้นหา
 # ==========================================
 FUND_MAP = {
-    'SCBAXJ(E)':    ['SCBAXJ(E)', 'SCBAXJ-E', 'SCBAXJ'],
-    'SCBNDQ(E)':    ['SCBNDQ(E)', 'SCBNDQ-E', 'SCBNDQ'],
-    'SCBS&P500E':   ['SCBS&P500E', 'SCBS&P500(E)', 'SCBS&P500-E', 'SCBS&P500'],
-    'SCBSEMI(E)':   ['SCBSEMI(E)', 'SCBSEMI-E', 'SCBSEMI'],
-    'SCBGVALUE(E)': ['SCBGVALUE(E)', 'SCBGVALUE-E', 'SCBGVALUE'],
-    'SCBWORLD(E)':  ['SCBWORLD(E)', 'SCBWORLD-E', 'SCBWORLD']
+    'SCBAXJ(E)':    ['SCBAXJ(E)', 'SCBAXJ-E'],
+    'SCBNDQ(E)':    ['SCBNDQ(E)', 'SCBNDQ-E'],
+    'SCBS&P500E':   ['SCBS&P500E', 'SCBS&P500(E)', 'SCBS&P500-E'],
+    'SCBSEMI(E)':   ['SCBSEMI(E)', 'SCBSEMI-E'],
+    'SCBGVALUE(E)': ['SCBGVALUE(E)', 'SCBGVALUE-E'],
+    'SCBWORLD(E)':  ['SCBWORLD(E)', 'SCBWORLD-E']
 }
 
 def fetch_scb_nav():
@@ -54,7 +54,7 @@ def fetch_scb_nav():
 
                 if fund_code in aliases_upper:
                     nav_results[asset_name] = float(nav)
-                    print(f"✅ {asset_name} -> NAV {nav}")
+                    print(f"✅ {asset_name} <- {fund_code} -> NAV {nav}")
                     break
 
         return nav_results
@@ -118,7 +118,7 @@ def update_supabase_batch(nav_data):
         print("⚠️ ไม่พบข้อมูล asset_name / asset_code ใน Supabase ที่จับคู่ตรงกัน")
 
 if __name__ == "__main__":
-    print("🚀 เริ่มต้นกระบวนการ Auto Update NAV (SCB via Playwright + Scroll)...")
+    print("🚀 เริ่มต้นกระบวนการ Auto Update NAV (SCB JSON API)...")
     nav_data = fetch_scb_nav()
     print("-" * 40)
     print(f"📊 สรุปข้อมูลที่ดึงได้ ({len(nav_data)}/{len(FUND_MAP)} กองทุน): {nav_data}")
