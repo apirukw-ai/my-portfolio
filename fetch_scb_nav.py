@@ -69,6 +69,17 @@ def fetch_scb_nav():
             finally:
                 browser.close()
 
+        # ===== DEBUG JSON =====
+        import requests
+
+        r = requests.get(
+            "https://www.scbam.com/funddata/funddataws.json",
+            timeout=30
+        )
+
+        print("STATUS:", r.status_code)
+        print(r.text[:2000])      
+        
         soup = BeautifulSoup(html_content, 'html.parser')
 
         # ค้นหาทุก Element ที่มีข้อความ
