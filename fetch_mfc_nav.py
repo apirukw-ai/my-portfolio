@@ -41,9 +41,7 @@ def fetch_mfc_nav():
                 page.wait_for_timeout(5000) # รอเพิ่มอีกนิดให้ JavaScript เรนเดอร์ข้อมูลจนครบ
                 
                 html_content = page.content()
-                print("MGTECH" in html_content)
-                print("MGFPVD" in html_content)
-                print("M-EM" in html_content)
+                
             finally:
                 browser.close()
 
@@ -51,57 +49,38 @@ def fetch_mfc_nav():
         rows = soup.find_all('tr')
         print(f"ℹ️ พบแถวตารางทั้งหมด: {len(rows)} แถว")
         
-        for row in rows[:10]:
-            print(row.get_text(" ", strip=True))
         
-        for row in rows:
-            text = row.get_text(" ", strip=True)
+            cells = row.find_all("td")
 
-            if "IGOLD" in text.upper():
-                print("FOUND IGOLD:", text)
+            if len(cells) < 8:
+                continue
 
-            if "MGTECH" in text.upper():
-                print("FOUND MGTECH:", text)
-
-            if "M-EM" in text.upper():
-                print("FOUND M-EM:", text)
-
-            if "MEURO" in text.upper():
-                print("FOUND MEURO:", text)
-
-            if "MGFPVD" in text.upper():
-                print("FOUND MGFPVD:", text)
-
-            if "M-ASIA" in text.upper():
-                print("FOUND M-ASIA:", text)
-            raw_text = row.get_text()
-            clean_text = re.sub(r'[\s\-]+', '', raw_text).upper()
+            fund_code = cells[0].get_text(" ", strip=True).upper()
 
             for asset_name, aliases in FUND_MAP.items():
+
                 if asset_name in nav_results:
                     continue
 
-                for alias in aliases:
-                    clean_alias = re.sub(r'[\s\-]+', '', alias).upper()
-                    if clean_alias in clean_text:
-                        print("MATCH:", asset_name)
-                        print("TEXT:", raw_text)
+                aliases_upper = [a.upper() for a in aliases]
 
-                        matches = re.findall(r'\d[\d,]*\.\d{4}', raw_text)
-                        print("MATCHES:", matches)
+                if fund_code in aliases_upper:
 
-                        if matches:
-                            for m in matches:
-                                try:
-                                    nav_val = float(m.replace(',', ''))
+                    try:
+                        nav_val = float(
+                            cells[4].get_text(strip=True).replace(",", "")
+                        )
 
-                                    if 1.0 <= nav_val <= 1000.0:
-                                        nav_results[asset_name] = nav_val
-                                        print(f"✅ เจอ {asset_name} -> NAV: {nav_val}")
-                                        break
+                        nav_results[asset_name] = nav_val
 
-                                except ValueError:
-                                    continue
+                        print(
+                            f"✅ {asset_name} <- {fund_code} -> NAV {nav_val}"
+                        )
+
+                    except Exception as e:
+                        print(f"⚠️ {fund_code}: {e}")
+
+                    break
 
         return nav_results
 
