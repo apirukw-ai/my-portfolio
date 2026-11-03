@@ -84,7 +84,10 @@ def fetch_mfc_nav():
                 for alias in aliases:
                     clean_alias = re.sub(r'[\s\-]+', '', alias).upper()
                     if clean_alias in clean_text:
+                    print("MATCH:", asset_name)
+                    print("TEXT:", raw_text)
                         matches = re.findall(r'\d[\d\,]*\.\d{4}', raw_text)
+                        print("MATCHES:", matches)
                         if matches:
                             try:
                                 nav_val = float(matches[0].replace(',', ''))
