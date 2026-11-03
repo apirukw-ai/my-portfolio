@@ -91,12 +91,15 @@ def fetch_mfc_nav():
                         print("MATCHES:", matches)
 
                         if matches:
-                            try:
-                                nav_val = float(matches[0].replace(',', ''))
+                            for m in matches:
+                                try:
+                                    nav_val = float(m.replace(',', ''))
+
                                 if 1.0 <= nav_val <= 1000.0:
                                     nav_results[asset_name] = nav_val
                                     print(f"✅ เจอ {asset_name} -> NAV: {nav_val}")
                                     break
+
                             except ValueError:
                                 continue
 
