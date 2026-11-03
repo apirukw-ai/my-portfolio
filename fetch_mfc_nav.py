@@ -66,7 +66,7 @@ def fetch_mfc_nav():
                 print("ROW:", [c.get_text(" ", strip=True) for c in cells[:8]])
                 break
 
-            fund_code = cells[0].get_text(" ", strip=True).upper()
+            fund_text = cells[1].get_text(" ", strip=True).upper()
 
             for asset_name, aliases in FUND_MAP.items():
                 if asset_name in nav_results:
@@ -74,17 +74,19 @@ def fetch_mfc_nav():
 
                 aliases_upper = [a.upper() for a in aliases]
 
-                if fund_code in aliases_upper:
-                    try:
-                        nav_val = float(
-                            cells[4].get_text(strip=True).replace(",", "")
-                        )
-                        nav_results[asset_name] = nav_val
-                        print(f"✅ {asset_name} <- {fund_code} -> NAV {nav_val}")
-                    except Exception as e:
-                        print(f"⚠️ {fund_code}: {e}")
+                for alias in aliases_upper:
+                    if alias in fund_text:
+                        try:
+                            nav_val = float(
+                                cells[4].get_text(strip=True).replace(",", "")
+                            )
+                            nav_results[asset_name] = nav_val
+                            print(f"✅ {asset_name} <- {fund_code} -> NAV {nav_val}"
+                            )
+                        except Exception as e:
+                            print(f"⚠️ {fund_code}: {e}")
 
-                    break
+                        break
 
         return nav_results
 
