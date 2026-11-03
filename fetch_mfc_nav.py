@@ -60,11 +60,7 @@ def fetch_mfc_nav():
 
             if len(cells) < 8:
                 continue
-            if len(cells) > 0:
-                print("CELL0:", cells[0].get_text(" ", strip=True))
-            if len(cells) > 4:
-                print("ROW:", [c.get_text(" ", strip=True) for c in cells[:8]])
-                break
+                            
 
             fund_text = cells[1].get_text(" ", strip=True).upper()
 
@@ -81,7 +77,7 @@ def fetch_mfc_nav():
                                 cells[4].get_text(strip=True).replace(",", "")
                             )
                             nav_results[asset_name] = nav_val
-                            print(f"✅ {asset_name} <- {fund_code} -> NAV {nav_val}"
+                            print(f"✅ {asset_name} <- {alias} -> NAV {nav_val}")
                             )
                         except Exception as e:
                             print(f"⚠️ {fund_code}: {e}")
