@@ -22,9 +22,9 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 FUND_MAP = {
     "IGOLD-G": ["IGOLD-G", "IGOLD"],
     "MGTECH": ["MGTECH", "MTECH", "M-TECH"],
-    "M-EM": ["M-EM", "MEM"],
+    "M-EM": ["M-EM"],
     "MEURO-G": ["MEURO-G", "MEURO"],
-    "MGFPVD": ["MGFPVD", "MGF"],
+    "MGFPVD": ["MGFPVD"],
     "M-ASIA": ["M-ASIA", "MASIA"],
 }
 
