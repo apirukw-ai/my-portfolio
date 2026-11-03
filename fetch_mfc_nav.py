@@ -48,12 +48,15 @@ def fetch_mfc_nav():
         soup = BeautifulSoup(html_content, 'html.parser')
         rows = soup.find_all('tr')
         print(f"ℹ️ พบแถวตารางทั้งหมด: {len(rows)} แถว")
-        
-        
+
+        for row in rows:
+
             cells = row.find_all("td")
 
             if len(cells) < 8:
                 continue
+
+    ...
 
             fund_code = cells[0].get_text(" ", strip=True).upper()
 
