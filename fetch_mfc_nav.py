@@ -41,6 +41,9 @@ def fetch_mfc_nav():
                 page.wait_for_timeout(5000) # รอเพิ่มอีกนิดให้ JavaScript เรนเดอร์ข้อมูลจนครบ
                 
                 html_content = page.content()
+                print("MGTECH" in html_content)
+                print("MGFPVD" in html_content)
+                print("M-EM" in html_content)
             finally:
                 browser.close()
 
@@ -52,6 +55,25 @@ def fetch_mfc_nav():
             print(row.get_text(" ", strip=True))
         
         for row in rows:
+            text = row.get_text(" ", strip=True)
+
+            if "IGOLD" in text.upper():
+                print("FOUND IGOLD:", text)
+
+            if "MGTECH" in text.upper():
+                print("FOUND MGTECH:", text)
+
+            if "M-EM" in text.upper():
+                print("FOUND M-EM:", text)
+
+            if "MEURO" in text.upper():
+                print("FOUND MEURO:", text)
+
+            if "MGFPVD" in text.upper():
+                print("FOUND MGFPVD:", text)
+
+            if "M-ASIA" in text.upper():
+                print("FOUND M-ASIA:", text)
             raw_text = row.get_text()
             clean_text = re.sub(r'[\s\-]+', '', raw_text).upper()
 
