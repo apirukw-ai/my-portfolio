@@ -48,6 +48,9 @@ def fetch_mfc_nav():
         rows = soup.find_all('tr')
         print(f"ℹ️ พบแถวตารางทั้งหมด: {len(rows)} แถว")
         
+        for row in rows[:10]:
+            print(row.get_text(" ", strip=True))
+        
         for row in rows:
             raw_text = row.get_text()
             clean_text = re.sub(r'[\s\-]+', '', raw_text).upper()
