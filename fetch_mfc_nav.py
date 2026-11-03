@@ -95,13 +95,13 @@ def fetch_mfc_nav():
                                 try:
                                     nav_val = float(m.replace(',', ''))
 
-                                if 1.0 <= nav_val <= 1000.0:
-                                    nav_results[asset_name] = nav_val
-                                    print(f"✅ เจอ {asset_name} -> NAV: {nav_val}")
-                                    break
+                                    if 1.0 <= nav_val <= 1000.0:
+                                        nav_results[asset_name] = nav_val
+                                        print(f"✅ เจอ {asset_name} -> NAV: {nav_val}")
+                                        break
 
-                            except ValueError:
-                                continue
+                                except ValueError:
+                                    continue
 
         return nav_results
 
