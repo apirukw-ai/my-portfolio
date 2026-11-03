@@ -60,6 +60,11 @@ def fetch_mfc_nav():
 
             if len(cells) < 8:
                 continue
+            if len(cells) > 0:
+                print("CELL0:", cells[0].get_text(" ", strip=True))
+            if len(cells) > 4:
+                print("ROW:", [c.get_text(" ", strip=True) for c in cells[:8]])
+                break
 
             fund_code = cells[0].get_text(" ", strip=True).upper()
 
