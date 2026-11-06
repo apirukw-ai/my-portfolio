@@ -35,10 +35,10 @@ def take_weekly_snapshot():
     usd_thb_rate = get_usd_thb_rate()
 
     # ==========================================
-    # 2. ดึงข้อมูลพอร์ตปัจจุบันจาก user_portfolios
+    # 2. ดึงข้อมูล current_value และ total_cost จาก user_portfolios
     # ==========================================
     try:
-        res = supabase.table("user_portfolios").select("app_source, current_value").execute()
+        res = supabase.table("user_portfolios").select("app_source, current_value, total_cost").execute()
         items = res.data or []
     except Exception as e:
         print(f"❌ ไม่สามารถดึงข้อมูลจาก user_portfolios ได้: {e}")
@@ -48,20 +48,21 @@ def take_weekly_snapshot():
         print("⚠️ ไม่พบข้อมูลในตาราง user_portfolios")
         return
 
-    # คำนวณยอดรวม THB แยกตามแอป
-    app_totals = {}
+    # รวมยอด current_value และ total_cost แยกตาม app_source
+    app_data = {}
     for item in items:
         app = (item.get("app_source") or "OTHER").strip().upper()
-        val = float(item.get("current_value") or 0)
-        
-        # 🟢 ถ้าเป็น DIME ให้แปลงจาก USD เป็น THB ก่อนรวมยอด
-        if app == "DIME":
-            val = val * usd_thb_rate
+        c_val = float(item.get("current_value") or 0)
+        c_cost = float(item.get("total_cost") or 0)
 
-        app_totals[app] = app_totals.get(app, 0.0) + val
+        if app not in app_data:
+            app_data[app] = {"val": 0.0, "cost": 0.0}
+
+        app_data[app]["val"] += c_val
+        app_data[app]["cost"] += c_cost
 
     # ==========================================
-    # 3. ดึง Snapshot ล่าสุดก่อนหน้า เพื่อนำมาคำนวณ WoW และ YTD
+    # 3. ดึง Snapshot ล่าสุดก่อนหน้า เพื่อนำมาคำนวณ WoW และดึงค่า GPF เดิม
     # ==========================================
     prev_snapshots = {}
     try:
@@ -69,7 +70,7 @@ def take_weekly_snapshot():
             supabase.table("portfolio_snapshots")
             .select("*")
             .order("snapshot_date", desc=True)
-            .limit(10)
+            .limit(20)
             .execute()
         )
         for prev in (prev_res.data or []):
@@ -80,25 +81,23 @@ def take_weekly_snapshot():
         print(f"⚠️ ดึง snapshot ก่อนหน้าไม่สำเร็จ: {e}")
 
     # ==========================================
-    # 4. บันทึกลงตาราง portfolio_snapshots
+    # 4. จัดเตรียมข้อมูลแยกตามเงื่อนไขแอป และ บันทึกลง portfolio_snapshots
     # ==========================================
-    print(f"📊 สรุปยอดรวมแยกตามแอป ณ วันที่ {today_str}:")
+    print(f"📊 สรุปยอดรวมและผลตอบแทนแยกตามแอป ณ วันที่ {today_str}:")
     snapshot_rows = []
-    
-    for app, total_thb in app_totals.items():
+
+    for app, data in app_data.items():
+        raw_val = data["val"]
+        total_cost = data["cost"]
+
+        # แปลงเฉพาะ DIME เป็น THB สำหรับบันทึกยอดเงินรวม
+        total_thb = raw_val * usd_thb_rate if app == "DIME" else raw_val
+
+        # คำนวณ WoW (มูลค่าเปลี่ยนแปลงเทียบสัปดาห์ก่อน)
         prev_item = prev_snapshots.get(app, {})
         prev_val = float(prev_item.get("total_value_thb") or 0)
-        
-        # คำนวณ WoW Change
         wow_change = round(total_thb - prev_val, 2) if prev_val > 0 else 0.0
         wow_return = round((wow_change / prev_val) * 100, 2) if prev_val > 0 else 0.0
-        
-        # ดึงค่า % YTD ล่าสุดเดิมมาประคองไว้
-        reported_ytd = prev_item.get("reported_ytd_pct")
-        if reported_ytd is not None:
-            reported_ytd = round(float(reported_ytd) + wow_return, 2)
-
-        print(f"   • {app}: ฿{total_thb:,.2f} (WoW: {wow_return:+.2f}%)")
 
         row_payload = {
             "snapshot_date": today_str,
@@ -106,14 +105,32 @@ def take_weekly_snapshot():
             "total_value_thb": round(total_thb, 2),
             "wow_change_thb": wow_change,
             "wow_return_pct": wow_return,
-            "reported_ytd_pct": reported_ytd
         }
-        
-        # คัดลอกค่าประวัติอื่นจากของเดิม (ถ้ามี)
-        if prev_item.get("reported_5y_pct") is not None:
+
+        # 🟢 แยกเคส GPF กับ แอปอื่นๆ (MFC, SCB, DIME)
+        if app == "GPF":
+            # เว้น reported_ytd_pct เป็น None เพื่อให้หน้าเว็บสลับไปแสดง 5 ปีย้อนหลัง / ตั้งแต่เริ่มส่ง
+            row_payload["reported_ytd_pct"] = None
             row_payload["reported_5y_pct"] = prev_item.get("reported_5y_pct")
-        if prev_item.get("reported_since_inception_pct") is not None:
             row_payload["reported_since_inception_pct"] = prev_item.get("reported_since_inception_pct")
+
+            print(f"   • GPF: มูลค่า ฿{total_thb:,.2f} | (5ปี: {row_payload['reported_5y_pct']}%, เริ่มส่ง: {row_payload['reported_since_inception_pct']}%)")
+
+        else:
+            # คำนวณ % กำไร/ขาดทุนสะสมจริง
+            cum_pnl_pct = round(((raw_val - total_cost) / total_cost) * 100, 2) if total_cost > 0 else 0.0
+            row_payload["reported_ytd_pct"] = cum_pnl_pct
+            row_payload["reported_5y_pct"] = None
+            row_payload["reported_since_inception_pct"] = None
+
+            # คำนวณความต่าง % เมื่อเทียบกับสัปดาห์ก่อนสำหรับ Log
+            prev_ytd = prev_item.get("reported_ytd_pct")
+            ytd_diff_str = ""
+            if prev_ytd is not None:
+                diff = cum_pnl_pct - float(prev_ytd)
+                ytd_diff_str = f" ({diff:+.2f}%)"
+
+            print(f"   • {app}: มูลค่า ฿{total_thb:,.2f} | กำไรสะสม {cum_pnl_pct:+.2f}%{ytd_diff_str} | WoW: {wow_return:+.2f}%")
 
         snapshot_rows.append(row_payload)
 
