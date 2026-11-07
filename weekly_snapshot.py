@@ -62,7 +62,7 @@ def take_weekly_snapshot():
         app_data[app]["cost"] += c_cost
 
     # ==========================================
-    # 3. ดึง Snapshot ล่าสุดก่อนหน้า เพื่อนำมาคำนวณ WoW และดึงค่า GPF เดิม
+    # 3. ดึง Snapshot ล่าสุดก่อนหน้า เพื่อนำมาคำนวณ WoW และดึงค่าเดิม
     # ==========================================
     prev_snapshots = {}
     try:
@@ -107,29 +107,29 @@ def take_weekly_snapshot():
             "wow_return_pct": wow_return,
         }
 
-        # 🟢 แยกเคส GPF กับ แอปอื่นๆ (MFC, SCB, DIME)
+        # 🟢 1. เคส GPF: เว้น reported_ytd_pct เป็น None เพื่อแสดง 5 ปีย้อนหลัง / ตั้งแต่เริ่มส่ง
         if app == "GPF":
-            # เว้น reported_ytd_pct เป็น None เพื่อให้หน้าเว็บสลับไปแสดง 5 ปีย้อนหลัง / ตั้งแต่เริ่มส่ง
             row_payload["reported_ytd_pct"] = None
             row_payload["reported_5y_pct"] = prev_item.get("reported_5y_pct")
             row_payload["reported_since_inception_pct"] = prev_item.get("reported_since_inception_pct")
-
             print(f"   • GPF: มูลค่า ฿{total_thb:,.2f} | (5ปี: {row_payload['reported_5y_pct']}%, เริ่มส่ง: {row_payload['reported_since_inception_pct']}%)")
 
+        # 🟢 2. เคส MFC: ดึงค่า YTD เดิมมาใส่ล่วงหน้า รอพิมพ์อัปเดต YTD ใหม่เองใน Supabase
+        elif app == "MFC":
+            row_payload["reported_ytd_pct"] = prev_item.get("reported_ytd_pct")
+            row_payload["reported_5y_pct"] = prev_item.get("reported_5y_pct")
+            row_payload["reported_since_inception_pct"] = prev_item.get("reported_since_inception_pct")
+            print(f"   • MFC: มูลค่า ฿{total_thb:,.2f} | YTD สแตนด์บาย: {row_payload['reported_ytd_pct']}% (รอพิมพ์อัปเดตใน Supabase) | WoW: {wow_return:+.2f}%")
+
+        # 🟢 3. เคส SCB & DIME: คำนวณ % กำไร/ขาดทุนสะสมจริง อัตโนมัติ
         else:
-            # คำนวณ % กำไร/ขาดทุนสะสมจริง
             cum_pnl_pct = round(((raw_val - total_cost) / total_cost) * 100, 2) if total_cost > 0 else 0.0
             row_payload["reported_ytd_pct"] = cum_pnl_pct
             row_payload["reported_5y_pct"] = None
             row_payload["reported_since_inception_pct"] = None
 
-            # คำนวณความต่าง % เมื่อเทียบกับสัปดาห์ก่อนสำหรับ Log
             prev_ytd = prev_item.get("reported_ytd_pct")
-            ytd_diff_str = ""
-            if prev_ytd is not None:
-                diff = cum_pnl_pct - float(prev_ytd)
-                ytd_diff_str = f" ({diff:+.2f}%)"
-
+            ytd_diff_str = f" ({cum_pnl_pct - float(prev_ytd):+.2f}%)" if prev_ytd is not None else ""
             print(f"   • {app}: มูลค่า ฿{total_thb:,.2f} | กำไรสะสม {cum_pnl_pct:+.2f}%{ytd_diff_str} | WoW: {wow_return:+.2f}%")
 
         snapshot_rows.append(row_payload)
